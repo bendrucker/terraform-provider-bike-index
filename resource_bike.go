@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	bikeindex "github.com/bendrucker/terraform-provider-bike-index/pkg/bike-index"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
+
+	_ "github.com/motemen/go-loghttp/global"
 )
 
 var tireSizes = []string{"wide", "narrow"}
@@ -18,13 +21,17 @@ func resourceBike() *schema.Resource {
 		Delete: resourceBikeDelete,
 
 		Schema: map[string]*schema.Schema{
+			"owner_email": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
 			"description": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
 			},
 			"serial": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
+				Required: true,
 			},
 			"year": &schema.Schema{
 				Type:     schema.TypeInt,
@@ -32,7 +39,7 @@ func resourceBike() *schema.Resource {
 			},
 			"manufacturer_id": &schema.Schema{
 				Type:     schema.TypeInt,
-				Optional: true,
+				Required: true,
 			},
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -44,13 +51,16 @@ func resourceBike() *schema.Resource {
 			},
 			"frame": &schema.Schema{
 				Type:     schema.TypeList,
+				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"colors": {
 							Type:     schema.TypeList,
 							Elem:     &schema.Schema{Type: schema.TypeString},
-							Optional: true,
+							MinItems: 1,
+							MaxItems: 3,
+							Required: true,
 						},
 						"model": {
 							Type:     schema.TypeString,
@@ -71,11 +81,13 @@ func resourceBike() *schema.Resource {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(tireSizes, false),
+				Default:      "narrow",
 			},
 			"front_tire": {
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(tireSizes, false),
+				Default:      "narrow",
 			},
 			"rear_gears": {
 				Type:     schema.TypeString,
@@ -127,11 +139,44 @@ func resourceBike() *schema.Resource {
 }
 
 func resourceBikeCreate(d *schema.ResourceData, m interface{}) error {
+	config := m.(*Config)
+	bi := config.client
+
+	bike := &bikeindex.CreateUpdateBikeRequest{}
+
+	bike.TestBike = config.test
+
+	bike.Serial = d.Get("serial").(string)
+	bike.Manufacturer = strconv.Itoa(d.Get("manufacturer_id").(int))
+	bike.OwnerEmail = d.Get("owner_email").(string)
+
+	bike.Description = d.Get("description").(string)
+	bike.Name = d.Get("name").(string)
+
+	bike.Color = d.Get("frame.0.colors.0").(string)
+	bike.PrimaryFrameColor = d.Get("frame.0.colors.0").(string)
+	if color, ok := d.GetOk("frame.0.colors.1"); ok {
+		bike.SecondaryFrameColor = color.(string)
+	}
+	if color, ok := d.GetOk("frame.0.colors.2"); ok {
+		bike.TertiaryFrameColor = color.(string)
+	}
+
+	bike.FrontTireNarrow = bikeTireNarrow(d.Get("front_tire").(string))
+	bike.RearTireNarrow = bikeTireNarrow(d.Get("rear_tire").(string))
+
+	result, err := bi.Bikes.Create(bike)
+	if err != nil {
+		return fmt.Errorf("failed to create bike: %v", err)
+	}
+
+	d.SetId(strconv.Itoa(result.ID))
+
 	return resourceBikeRead(d, m)
 }
 
 func resourceBikeRead(d *schema.ResourceData, m interface{}) error {
-	bi := m.(*bikeindex.Client)
+	bi := m.(*Config).client
 
 	bike, err := bi.Bikes.Get(d.Id())
 	if err != nil {
@@ -178,8 +223,13 @@ func bikeTireWidth(narrow bool) string {
 	return "wide"
 }
 
+func bikeTireNarrow(width string) bool {
+	return width == "narrow"
+}
+
 func flattenComponents(components []*bikeindex.Component) []map[string]interface{} {
 	out := make([]map[string]interface{}, len(components), len(components))
+
 	for i, component := range components {
 		out[i] = map[string]interface{}{
 			"description":       component.Description,
@@ -189,4 +239,6 @@ func flattenComponents(components []*bikeindex.Component) []map[string]interface
 			"year":              component.Year,
 		}
 	}
+
+	return out
 }

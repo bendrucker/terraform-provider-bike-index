@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	bikeindex "github.com/bendrucker/terraform-provider-bike-index/pkg/bike-index"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -54,7 +53,7 @@ func dataSourceManufacturer() *schema.Resource {
 }
 
 func dataSourceManufacturerRead(d *schema.ResourceData, m interface{}) error {
-	bi := m.(*bikeindex.Client)
+	bi := m.(*Config).client
 	manufacturer, err := bi.Manufacturers.Get(d.Get("q").(string))
 
 	if err != nil {

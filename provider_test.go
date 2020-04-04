@@ -8,6 +8,6 @@ var testAccProviders map[string]terraform.ResourceProvider
 
 func init() {
 	testAccProviders = map[string]terraform.ResourceProvider{
-		"bike_index": Provider(),
+		"bikeindex": Provider(),
 	}
 }

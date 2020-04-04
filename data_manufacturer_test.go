@@ -13,8 +13,8 @@ func TestAccBikeIndexDataSourceManufacturer_basic(t *testing.T) {
 			{
 				Config: testAccBikeIndexDataSourceManufacturer_basic,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("bike_index_manufacturer.cannondale", "name", "Cannondale"),
-					resource.TestCheckResourceAttr("bike_index_manufacturer.cannondale", "slug", "cannondale"),
+					resource.TestCheckResourceAttr("data.bikeindex_manufacturer.cannondale", "name", "Cannondale"),
+					resource.TestCheckResourceAttr("data.bikeindex_manufacturer.cannondale", "slug", "cannondale"),
 				),
 			},
 		},
@@ -22,7 +22,7 @@ func TestAccBikeIndexDataSourceManufacturer_basic(t *testing.T) {
 }
 
 const testAccBikeIndexDataSourceManufacturer_basic = `
-data "bike_index_manufacturer" "cannondale" {
+data "bikeindex_manufacturer" "cannondale" {
   q = "cannondale"
 }
 `
