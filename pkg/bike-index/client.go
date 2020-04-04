@@ -17,4 +17,12 @@ func New(baseURL string) *Client {
 // Client is a bikeindex.org API client
 type Client struct {
 	Manufacturers *manufacturersService
+
+	token string
+}
+
+// SetToken sets the API token for the client
+func (c *Client) SetToken(token string) *Client {
+	c.token = token
+	return c
 }
