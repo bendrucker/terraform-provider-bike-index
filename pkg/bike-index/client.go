@@ -11,12 +11,14 @@ func New(baseURL string) *Client {
 
 	return &Client{
 		Manufacturers: newManufacturerService(s.New()),
+		Bikes:         newBikeService(s.New()),
 	}
 }
 
 // Client is a bikeindex.org API client
 type Client struct {
 	Manufacturers *manufacturersService
+	Bikes         *bikeService
 
 	token string
 }
